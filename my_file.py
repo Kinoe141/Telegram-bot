@@ -4,6 +4,7 @@ from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
+from datetime import datetime, timedelta
 
 bot = Bot(token='8118173051:AAFgVLf5hULwp8nWrrxi7KT4RJrw1-idZxM')
 dp = Dispatcher()
@@ -13,6 +14,9 @@ class Form(StatesGroup):
     mail = State()
     course = State()
     contract_review = State()  # Новое состояние для просмотра договора
+
+# Словарь для хранения зарегистрированных студентов и их курсов
+registered_students = {}
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
@@ -49,6 +53,16 @@ async def form_name(message: Message, state: FSMContext):
                          "Ваша заявка успешно подана!")
     #await state.clear()  # Очищаем состояние
 
+    # Сохраняем информацию о зарегистрированном студенте
+    registered_students[message.from_user.id] = {
+        'name': data['name'],
+        'mail': data['mail'],
+        'course': data['course'],
+        'chat_id': message.from_user.id,
+        'start_date': datetime.now() + timedelta(weeks=1),  # Курс начинается через неделю
+        'contract_signed': False  # Статус подписания договора
+    }
+
     await state.set_state(Form.contract_review) # Устанавливаем состояние для просмотра договора
     contract_text = "Вот проект вашего договора:\n\n" \
                     "1. Образовательные услуги предоставляются на основании данной заявки.\n" \
@@ -62,12 +76,26 @@ async def form_name(message: Message, state: FSMContext):
 async def process_contract_review(message: Message, state: FSMContext):
     if message.text.lower() == 'да':
         data = await state.get_data()
+
+        # Обновляем статус подписания договора в словаре студентов
+        registered_students[message.from_user.id]['contract_signed'] = True
+
         await message.answer("Спасибо! Ваше согласие зафиксировано.")
         # Здесь можно добавить логику для уведомления менеджера (например, отправка сообщения)
         manager_message = (f"Студент {data['name']} согласился с условиями договора.\n"
                            f"Контакт: {data['mail']}\n"
                            f"Курс: {data['course']}")
         await bot.send_message(chat_id='6300119200', text=manager_message)  # Замените на ID Вашего менеджера
+
+        # Рассылка расписания занятий сразу после подписания договора
+        start_date = registered_students[message.from_user.id]['start_date']
+        schedule_message = (f"Курс {data['course']} начинается {start_date.strftime('%d.%m.%Y')}.\n"
+                            "Расписание занятий:\n"
+                            "1. Занятие 1 - дата и время\n"
+                            "2. Занятие 2 - дата и время\n"
+                            "3. Занятие 3 - дата и время")
+
+        await bot.send_message(chat_id=message.from_user.id, text=schedule_message)
 
     elif message.text.lower() == 'нет':
         data = await state.get_data()
