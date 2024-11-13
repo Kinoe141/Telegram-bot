@@ -91,7 +91,7 @@ async def process_contract_review(message: Message, state: FSMContext):
         await message.answer("Спасибо! Ваше согласие зафиксировано.")
         # Здесь можно добавить логику для уведомления менеджера (например, отправка сообщения)
         manager_message = (f"Студент {data['name']} согласился с условиями договора.\n"
-                           f"Контакт: {data['mail']}\n"
+                           f"Почта: {data['mail']}\n"
                            f"Курс: {data['course']}")
         await bot.send_message(chat_id='6300119200', text=manager_message)  # Замените на ID Вашего менеджера
 
