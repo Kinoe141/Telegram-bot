@@ -12,6 +12,7 @@ class Form(StatesGroup):
     name = State()
     mail = State()
     course = State()
+    contract_review = State()  # Новое состояние для просмотра договора
 
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
@@ -46,8 +47,44 @@ async def form_name(message: Message, state: FSMContext):
                          f"Почта: {data['mail']}\n"
                          f"Курс: {data['course']}\n\n"
                          "Ваша заявка успешно подана!")
-    await state.clear()  # Очищаем состояние
+    #await state.clear()  # Очищаем состояние
 
+    await state.set_state(Form.contract_review) # Устанавливаем состояние для просмотра договора
+    contract_text = "Вот проект вашего договора:\n\n" \
+                    "1. Образовательные услуги предоставляются на основании данной заявки.\n" \
+                    "2. Стоимость обучения составляет X рублей.\n" \
+                    "3. Договор вступает в силу после подписания.\n\n" \
+                    "Пожалуйста, подтвердите согласие с условиями договора (да/нет)."
+
+    await message.answer(contract_text)
+
+@dp.message(Form.contract_review)
+async def process_contract_review(message: Message, state: FSMContext):
+    if message.text.lower() == 'да':
+        data = await state.get_data()
+        await message.answer("Спасибо! Ваше согласие зафиксировано.")
+        # Здесь можно добавить логику для уведомления менеджера (например, отправка сообщения)
+        manager_message = (f"Студент {data['name']} согласился с условиями договора.\n"
+                           f"Контакт: {data['mail']}\n"
+                           f"Курс: {data['course']}")
+        await bot.send_message(chat_id='6300119200', text=manager_message)  # Замените на ID Вашего менеджера
+
+    elif message.text.lower() == 'нет':
+        data = await state.get_data()
+        manager_message = (f"Студент {data['name']} отклонил условия договора.\n"
+                           f"Контакт: {data['mail']}\n"
+                           f"Курс: {data['course']}")
+        await bot.send_message(chat_id='6300119200', text=manager_message)
+        # Укажите ссылку на менеджера (например, на его Telegram-аккаунт)
+        manager_contact_link = "[Связаться с менеджером](https://t.me/kinoe141)"
+        await message.answer(
+            "Вы отклонили условия договора. Если у вас есть вопросы, пожалуйста, свяжитесь с менеджером по телефону +7 (123) 456-78-90.\n"
+            f"{manager_contact_link}", parse_mode='Markdown')  # Используйте Markdown для активной ссылки
+
+    else:
+        await message.answer("Пожалуйста, ответьте 'да' или 'нет'.")
+
+    await state.clear()  # Завершаем состояние
 
 async def main():
     await dp.start_polling(bot)
