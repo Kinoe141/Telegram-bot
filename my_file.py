@@ -6,6 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from datetime import datetime, timedelta
 
+import app.keyboard as kb
+
 bot = Bot(token='8118173051:AAFgVLf5hULwp8nWrrxi7KT4RJrw1-idZxM')
 dp = Dispatcher()
 
@@ -14,6 +16,11 @@ class Form(StatesGroup):
     mail = State()
     course = State()
     contract_review = State()  # Новое состояние для просмотра договора
+    feedback = State()  # Состояние для сбора обратной связи
+    feedback_question_1 = State()  # Состояние для первого вопроса анкеты
+    feedback_question_2 = State()  # Состояние для второго вопроса анкеты
+    feedback_question_3 = State()
+    feedback_question_4 = State()
 
 # Словарь для хранения зарегистрированных студентов и их курсов
 registered_students = {}
@@ -60,7 +67,8 @@ async def form_name(message: Message, state: FSMContext):
         'course': data['course'],
         'chat_id': message.from_user.id,
         'start_date': datetime.now() + timedelta(weeks=1),  # Курс начинается через неделю
-        'contract_signed': False  # Статус подписания договора
+        'contract_signed': False,  # Статус подписания договора
+        'feedback_submitted': False  # Статус заполнения обратной связи
     }
 
     await state.set_state(Form.contract_review) # Устанавливаем состояние для просмотра договора
@@ -97,6 +105,9 @@ async def process_contract_review(message: Message, state: FSMContext):
 
         await bot.send_message(chat_id=message.from_user.id, text=schedule_message)
 
+        await message.answer("Прошли наши курсы? Поделитесь мнением!", reply_markup=kb.feedback_keyboard)
+
+
     elif message.text.lower() == 'нет':
         data = await state.get_data()
         manager_message = (f"Студент {data['name']} отклонил условия договора.\n"
@@ -113,6 +124,37 @@ async def process_contract_review(message: Message, state: FSMContext):
         await message.answer("Пожалуйста, ответьте 'да' или 'нет'.")
 
     await state.clear()  # Завершаем состояние
+
+@dp.message(F.text == 'Заполнить анкету')
+async def question(message: Message, state:FSMContext):
+#await message.answer('Ознакомьтесь с вопросами анкеты', reply_markup=kb.question)
+    await state.set_state(Form.feedback_question_1)  # Устанавливаем состояние для первого вопроса анкеты
+    await message.answer('1. Как вы оцениваете качество материалов курса?', reply_markup=kb.answer1)
+
+@dp.message(Form.feedback_question_1)
+async def feedback_question_1(message: Message, state: FSMContext):
+    # Переход к следующему вопросу
+    await state.set_state(Form.feedback_question_2)
+    await message.answer('2. Насколько удобным было взаимодействие с преподавателями?', reply_markup=kb.answer2)
+
+@dp.message(Form.feedback_question_2)
+async def feedback_question_2(message: Message, state: FSMContext):
+    await state.set_state(Form.feedback_question_3)
+    await message.answer('3. Как вы оцениваете свою успеваемость в курсе?', reply_markup=kb.answer3)
+
+@dp.message(Form.feedback_question_3)
+async def feedback_question_3(message: Message, state: FSMContext):
+    await state.set_state(Form.feedback_question_4)
+    await message.answer('4. Что вам понравилось больше всего в обучении?', reply_markup=kb.answer4)
+
+@dp.message(Form.feedback_question_4)
+async def feedback_question_4(message: Message, state: FSMContext):
+    # Здесь можно сохранить ответ на последний вопрос если нужно
+
+    # Финальное сообщение после всех вопросов анкеты
+    await message.answer("Спасибо за Ваше мнение! Будем ждать вас снова в онлайн-школе Learn Sphere!")
+    registered_students[message.from_user.id]['feedback_submitted'] = True
+    await state.clear()
 
 async def main():
     await dp.start_polling(bot)
