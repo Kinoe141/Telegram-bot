@@ -22,3 +22,6 @@ answer4 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Приветлив
                                        [KeyboardButton(text='Нестандартные задания')],
                                         [KeyboardButton(text='Все перечисленное')]],
                                         resize_keyboard=True)
+
+finish_keyboard = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Завершить анкету')]],
+                                             resize_keyboard=True)

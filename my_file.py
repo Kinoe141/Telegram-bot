@@ -1,4 +1,4 @@
-import asyncio
+import asyncio, re
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.filters import CommandStart, Command
@@ -25,6 +25,11 @@ class Form(StatesGroup):
 # Словарь для хранения зарегистрированных студентов и их курсов
 registered_students = {}
 
+def is_valid_email(mail):
+    """Проверка валидности электронной почты с помощью регулярного выражения."""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, mail) is not None
+
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer('Добро пожаловать! Я виртуальный ассистент онлайн-школы LearnSphere. '
@@ -38,18 +43,33 @@ async def cmd_apply(message: Message, state: FSMContext):
 
 @dp.message(Form.name)
 async def form_name(message: Message, state: FSMContext):
+    if not message.text.strip():
+        await message.answer("Пожалуйста, введите корректное имя.")
+        return
     await state.update_data(name=message.text) #Сохраняем имя в состоянии
     await state.set_state(Form.mail)  # Состояние для почты
     await message.answer('Введите Вашу электронную почту')
 
 @dp.message(Form.mail)
-async def form_name(message: Message, state: FSMContext):
+async def form_mail(message: Message, state: FSMContext):
+    mail = message.text.strip()
+    if not mail:
+        await message.answer("Пожалуйста, введите корректные контактные данные.")
+        return
+    if not is_valid_email(mail):
+        await message.answer("Пожалуйста, введите действительный адрес электронной почты.")
+        return
     await state.update_data(mail=message.text) #Сохраняем почту в состоянии
     await state.set_state(Form.course)  # Состояние для курса
-    await message.answer('Введите название курса, который вы хотели бы изучать')
-
+    await message.answer('Введите название курса, который вы хотели бы изучать.'
+                         'Мы осуществляем подготовку студентов по следующим направлениям:\n'
+                         '1. Веб-разработка: HTML, CSS, JavaScript\n'
+                         '2. Мобильные приложения на React Native\n'
+                         '3. Основы программирования на Python\n'
+                         '4. Игры на Unity\n'
+                         '5. DevOps и автоматизация')
 @dp.message(Form.course)
-async def form_name(message: Message, state: FSMContext):
+async def form_course(message: Message, state: FSMContext):
     await state.update_data(course=message.text) #Сохраняем название курса в состоянии
     data = await state.get_data()
     # Формируем ответ с собранной информацией
@@ -152,9 +172,14 @@ async def feedback_question_4(message: Message, state: FSMContext):
     # Здесь можно сохранить ответ на последний вопрос если нужно
 
     # Финальное сообщение после всех вопросов анкеты
-    await message.answer("Спасибо за Ваше мнение! Будем ждать вас снова в онлайн-школе Learn Sphere!")
+    await message.answer("Спасибо за Ваше мнение! Будем ждать вас снова в онлайн-школе Learn Sphere!",
+                         reply_markup=kb.finish_keyboard)
     registered_students[message.from_user.id]['feedback_submitted'] = True
     await state.clear()
+
+@dp.message(F.text == 'Завершить анкету')
+async def finish_feedback(message: Message):
+    await message.answer("Анкета завершена. Спасибо за участие!")
 
 async def main():
     await dp.start_polling(bot)
