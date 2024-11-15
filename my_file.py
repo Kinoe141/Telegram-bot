@@ -30,6 +30,11 @@ def is_valid_email(mail):
     pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, mail) is not None
 
+def is_valid_name(name):
+    """Проверка валидности имени: только буквы и пробелы."""
+    pattern = r'^[A-Za-zА-Яа-яЁё\s]+$'
+    return re.match(pattern, name) is not None
+
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     await message.answer('Добро пожаловать! Я виртуальный ассистент онлайн-школы LearnSphere. '
@@ -43,8 +48,9 @@ async def cmd_apply(message: Message, state: FSMContext):
 
 @dp.message(Form.name)
 async def form_name(message: Message, state: FSMContext):
-    if not message.text.strip():
-        await message.answer("Пожалуйста, введите корректное имя.")
+    name = message.text.strip()
+    if not is_valid_name(name):
+        await message.answer("Имя должно содержать только буквы. Пожалуйста, попробуйте снова.")
         return
     await state.update_data(name=message.text) #Сохраняем имя в состоянии
     await state.set_state(Form.mail)  # Состояние для почты
@@ -53,9 +59,7 @@ async def form_name(message: Message, state: FSMContext):
 @dp.message(Form.mail)
 async def form_mail(message: Message, state: FSMContext):
     mail = message.text.strip()
-    if not mail:
-        await message.answer("Пожалуйста, введите корректные контактные данные.")
-        return
+
     if not is_valid_email(mail):
         await message.answer("Пожалуйста, введите действительный адрес электронной почты.")
         return
@@ -63,11 +67,11 @@ async def form_mail(message: Message, state: FSMContext):
     await state.set_state(Form.course)  # Состояние для курса
     await message.answer('Введите название курса, который вы хотели бы изучать.'
                          'Мы осуществляем подготовку студентов по следующим направлениям:\n'
-                         '1. Веб-разработка: HTML, CSS, JavaScript\n'
-                         '2. Мобильные приложения на React Native\n'
-                         '3. Основы программирования на Python\n'
-                         '4. Игры на Unity\n'
-                         '5. DevOps и автоматизация')
+                         '1. Python\n'
+                         '2. Data Science\n'
+                         '3. Web разработка\n'
+                         '4. Мобильная разработка\n'
+                         '5. Основы DevOps')
 @dp.message(Form.course)
 async def form_course(message: Message, state: FSMContext):
     await state.update_data(course=message.text) #Сохраняем название курса в состоянии

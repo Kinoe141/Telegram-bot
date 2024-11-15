@@ -13,8 +13,8 @@ answer2 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Удобным')],
                                        [KeyboardButton(text='Неудобным')]],
                                         resize_keyboard=True)
 answer3 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Отлично')],
-                                       [KeyboardButton(text='Удовлетворительно')],
-                                       [KeyboardButton(text='Плохо')]],
+                                       [KeyboardButton(text='Хорошо')],
+                                       [KeyboardButton(text='Удовлетворительно')]],
                                         resize_keyboard=True)
 
 answer4 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text='Приветливая команда')],
